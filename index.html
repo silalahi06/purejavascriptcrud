@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/5/w3.css">
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3pro.css">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <title>CRUD with localStorage</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+    input[type="text"] { padding: 6px; width: 200px; margin-right: 10px; }
+    button { padding: 6px 12px; margin-right: 4px; }
+  </style>
+</head>
+<body>
+
+  <h2 class="w3-cursive w3-animate-top">Input Data Karyawan</h2>
+
+  <form id="crud-form">
+    <input type="hidden" id="index">
+
+    <div class="mb-3 mt-3">
+      <label for="text">Nama :</label>
+      <input type="text" class="form-control" id="name" placeholder="Masukkan Nama" name="name">
+    </div>
+
+     <div class="mb-3 mt-3">
+      <label for="text">Jabatan :</label>
+      <input type="text" class="form-control" id="jabatan" placeholder="Masukkan Jabatan" name="jabatan">
+    </div>
+
+    <div class="mb-3 mt-3">
+      <label for="text">Email :</label>
+      <input type="text" class="form-control" id="email" placeholder="Masukkan Email" name="email">
+    </div>
+
+    <!-- <input type="text" id="name" placeholder="Name" required>
+    <input type="text" id="jabatan" placeholder="Jabatan" required>
+    <input type="text" id="email" placeholder="Email" required>-->
+    <div class="w3-bar">
+    <button type="submit" class="btn btn-success">Save</button>
+    <button type="button" class="btn btn-dark" onclick="clearForm()">Clear</button>
+    <button type="button" disabled class="btn btn-info" onclick="downloadJSON()">Download JSON</button><p></p>
+    </div>
+    <div class="w3-bar">
+    <input type="file" disabled id="fileInput" accept=".json" onchange="importJSON()" />
+      </div>
+  </form>
+  <div class="w3-responsive">
+  <table class="w3-table-all">
+    <thead>
+      <tr>
+        <th>No</th>
+        <th>Name</th>
+        <th>Jabatan</th>
+        <th>Email</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="data-table"></tbody>
+  </table>
+  </div>
+  <!-- Load external data -->
+  <script src="data.js"></script>
+
+  <script>
+    const STORAGE_KEY = "myCrudData";
+
+    // Load data from localStorage or use external JSON
+    let data = [];
+
+    function loadData() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          data = JSON.parse(saved);
+        } catch (e) {
+          data = [...jsonData];
+        }
+      } else {
+        data = [...jsonData]; // From data.js
+      }
+    }
+
+    function saveData() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    function downloadJSON() {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "data-export.json";
+  a.click();
+
+  URL.revokeObjectURL(url); // Clean up memory
+}
+function importJSON() {
+  const fileInput = document.getElementById("fileInput");
+  const file = fileInput.files[0];
+
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    try {
+      const importedData = JSON.parse(e.target.result);
+
+      if (!Array.isArray(importedData)) {
+        alert("Invalid JSON format. Expected an array of objects.");
+        return;
+      }
+
+      // Optional: Merge or replace
+      if (confirm("Do you want to append this data? Click Cancel to overwrite.")) {
+        data = data.concat(importedData);
+      } else {
+        data = importedData;
+      }
+
+      saveData();
+      renderTable();
+      clearForm();
+      alert("Data imported successfully!");
+    } catch (err) {
+      alert("Failed to parse JSON: " + err.message);
+    }
+  };
+
+  reader.readAsText(file);
+}
+
+    function renderTable() {
+      const table = document.getElementById('data-table');
+      table.innerHTML = "";
+
+      data.forEach((item, index) => {
+        table.innerHTML += `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${item.name}</td>
+            <td>${item.jabat}</td>
+            <td>${item.email}</td>
+            <td>
+              <button class="w3-button w3-tiny w3-blue w3-round" onclick="editData(${index})">Edit</button>
+              <button class="w3-button w3-tiny w3-red w3-round" onclick="deleteData(${index})">Delete</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    document.getElementById('crud-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const jabat = document.getElementById('jabatan').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const index = document.getElementById('index').value;
+
+      if (index === "") {
+        data.push({ name, jabat, email }); // Create
+      } else {
+        data[index] = { name, jabat, email }; // Update
+      }
+
+      saveData();
+      renderTable();
+      clearForm();
+    });
+
+    function editData(index) {
+      document.getElementById('name').value = data[index].name;
+      document.getElementById('jabatan').value = data[index].jabat;
+      document.getElementById('email').value = data[index].email;
+      document.getElementById('index').value = index;
+    }
+
+    function deleteData(index) {
+      if (confirm("Delete this entry?")) {
+        data.splice(index, 1);
+        saveData();
+        renderTable();
+        clearForm();
+      }
+    }
+
+    function clearForm() {
+      document.getElementById('crud-form').reset();
+      document.getElementById('index').value = "";
+    }
+
+    // Initialize
+    loadData();
+    renderTable();
+  </script>
+
+</body>
+</html>
